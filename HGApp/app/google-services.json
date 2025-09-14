@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "333352252452",
+    "project_id": "hiddengems-ccd1a",
+    "storage_bucket": "hiddengems-ccd1a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:333352252452:android:67d3857b85afffd156d4b1",
+        "android_client_info": {
+          "package_name": "com.dimitrije.hiddengems"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-s3FnXAvi5BjZZR3kpL64Bbpr4FSHvDc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
