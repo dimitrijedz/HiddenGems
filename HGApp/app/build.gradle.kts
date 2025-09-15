@@ -1,3 +1,4 @@
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,6 +18,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["MAPS_API_KEY"] = project.findProperty("MAPS_API_KEY") as? String ?: ""
     }
 
     buildTypes {
@@ -42,6 +44,12 @@ android {
 
 dependencies {
 
+    implementation(libs.play.services.location)
+    implementation(libs.maps.compose)
+    implementation(libs.maps.sdk)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.okhttp)
+    implementation(libs.json)
     implementation(libs.coil.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)

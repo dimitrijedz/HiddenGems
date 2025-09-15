@@ -51,22 +51,24 @@ fun HiddenGemsNavHost() {
         }
 
         composable(AppRoutes.Register) {
-            RegisterScreen(
-                onRegisterSuccess = {
-                    navController.popBackStack()
-                    navController.navigate(AppRoutes.Profile)
-                },
-                navController = navController
-            )
+            RegisterScreen(navController = navController)
         }
 
         composable(AppRoutes.Profile) {
             ProfileScreen(
+                navController = navController,
                 onLogout = {
                     navController.popBackStack()
                     navController.navigate(AppRoutes.Login)
+                },
+                onNavigateToMap = {
+                    navController.navigate(AppRoutes.Map)
                 }
             )
+        }
+
+        composable(AppRoutes.Map) {
+            MapScreen()
         }
     }
 }

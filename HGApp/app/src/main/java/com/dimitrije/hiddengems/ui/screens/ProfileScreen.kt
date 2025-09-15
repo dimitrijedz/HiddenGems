@@ -11,9 +11,16 @@ import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
+import androidx.navigation.NavHostController
+
+import com.dimitrije.hiddengems.navigation.AppRoutes
 
 @Composable
-fun ProfileScreen(onLogout: () -> Unit) {
+fun ProfileScreen(
+    navController: NavHostController,
+    onLogout: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
     val uid = FirebaseAuth.getInstance().currentUser?.uid
     var userData by remember { mutableStateOf<Map<String, Any>?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -77,6 +84,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+
+        Button(onClick = { navController.navigate(AppRoutes.Map) }) {
+            Text("Show map")
+        }
 
         Button(onClick = {
             FirebaseAuth.getInstance().signOut()

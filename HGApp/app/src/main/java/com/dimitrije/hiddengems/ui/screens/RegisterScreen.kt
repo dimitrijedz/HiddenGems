@@ -1,26 +1,27 @@
 package com.dimitrije.hiddengems.ui.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.dimitrije.hiddengems.navigation.AppRoutes
 import com.dimitrije.hiddengems.ui.components.PasswordInput
 import com.dimitrije.hiddengems.viewmodel.AuthViewModel
-import androidx.compose.foundation.text.KeyboardOptions
 
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: () -> Unit,
     navController: NavController,
     authViewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
@@ -32,9 +33,22 @@ fun RegisterScreen(
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val success = authViewModel.registrationSuccess
+
     val context = LocalContext.current
     val imagePicker = rememberLauncherForActivityResult(GetContent()) { uri ->
         photoUri = uri
+    }
+
+    // Ensure latest context and navController are used inside callbacks
+    val currentContext by rememberUpdatedState(context)
+    val currentNavController by rememberUpdatedState(navController)
+
+    LaunchedEffect(success) {
+        if (success) {
+            Toast.makeText(context, "Registration successful. Please log in.", Toast.LENGTH_LONG).show()
+            navController.navigate(AppRoutes.Login)
+        }
     }
 
     Column(
@@ -97,7 +111,7 @@ fun RegisterScreen(
 
         Button(
             onClick = {
-                if (name.isBlank() || surname.isBlank() || phone.isBlank() || email.isBlank() || password.isBlank() /*|| photoUri == null*/) {
+                if (name.isBlank() || surname.isBlank() || phone.isBlank() || email.isBlank() || password.isBlank()) {
                     errorMessage = "Missing data"
                     return@Button
                 }
@@ -110,7 +124,13 @@ fun RegisterScreen(
                     password = password,
                     photoUri = photoUri,
                     context = context,
-                    onSuccess = onRegisterSuccess,
+                    onSuccess = {
+                        Toast.makeText(currentContext, "Registration successful. Please log in.", Toast.LENGTH_LONG).show()
+                        currentNavController.navigate(AppRoutes.Login) {
+                            popUpTo(AppRoutes.Register) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onError = { errorMessage = it.localizedMessage }
                 )
             },

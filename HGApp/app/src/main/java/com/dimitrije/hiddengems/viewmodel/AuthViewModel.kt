@@ -1,31 +1,36 @@
 package com.dimitrije.hiddengems.viewmodel
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import com.google.firebase.auth.FirebaseAuth
 import android.content.Context
 import android.net.Uri
-import com.google.firebase.Timestamp
+import androidx.lifecycle.AndroidViewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
-import com.google.android.gms.tasks.Task
-import com.google.firebase.storage.UploadTask
+import com.google.firebase.Timestamp
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.IOException
+import androidx.core.net.toUri
+import androidx.compose.runtime.*
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
-
-    fun registerWithEmail(email: String, password: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { onError(it) }
-    }
+    private val firestore = FirebaseFirestore.getInstance()
 
     fun loginWithEmail(email: String, password: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { onError(it) }
     }
+
+    var registrationSuccess by mutableStateOf(false)
+        private set
+
+    var registrationError by mutableStateOf<String?>(null)
+        private set
 
     fun registerWithFullData(
         name: String,
@@ -38,44 +43,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         onSuccess: () -> Unit,
         onError: (Exception) -> Unit
     ) {
-        val auth = FirebaseAuth.getInstance()
-        val firestore = FirebaseFirestore.getInstance()
-        val storage = FirebaseStorage.getInstance()
-
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val uid = result.user?.uid ?: return@addOnSuccessListener
-                val storageRef = storage.reference.child("users/$uid/profile.jpg")
 
-                val finalStream = try {
-                    if (photoUri != null) {
-                        context.contentResolver.openInputStream(photoUri)
-                    } else {
-                        val fallbackUri = Uri.parse("android.resource://${context.packageName}/drawable/default_avatar")
-                        context.contentResolver.openInputStream(fallbackUri)
-                    }
-                } catch (e: Exception) {
-                    onError(e)
-                    return@addOnSuccessListener
-                }
+                val finalUri = photoUri ?: "android.resource://${context.packageName}/drawable/default_avatar".toUri()
 
-                if (finalStream == null) {
-                    onError(Exception("Cant load photo"))
-                    return@addOnSuccessListener
-                }
-
-                storageRef.putStream(finalStream)
-                    .continueWithTask { task ->
-                        if (!task.isSuccessful) throw task.exception ?: Exception("Upload failed")
-                        storageRef.downloadUrl
-                    }
-                    .addOnSuccessListener { photoUrl ->
+                uploadToCloudinary(finalUri, context, uid,
+                    onSuccess = { photoUrl ->
                         val userData = mapOf(
                             "name" to name,
                             "surname" to surname,
                             "phone" to phone,
                             "email" to email,
-                            "photoUrl" to photoUrl.toString(),
+                            "photoUrl" to photoUrl,
                             "joinedAt" to Timestamp.now()
                         )
 
@@ -83,9 +64,63 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             .set(userData)
                             .addOnSuccessListener { onSuccess() }
                             .addOnFailureListener(onError)
-                    }
-                    .addOnFailureListener(onError)
+                    },
+                    onError = onError
+                )
             }
             .addOnFailureListener(onError)
+    }
+
+    private fun uploadToCloudinary(
+        imageUri: Uri,
+        context: Context,
+        publicId: String,
+        onSuccess: (String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val cloudName = "di4fagc5c"
+        val uploadPreset = "hidden_gems_upload" //
+
+        val inputStream = try {
+            context.contentResolver.openInputStream(imageUri)
+        } catch (e: Exception) {
+            onError(e)
+            return
+        }
+
+        if (inputStream == null) {
+            onError(Exception("Invalid URI"))
+            return
+        }
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", "profile.jpg",
+                inputStream.readBytes().toRequestBody("image/*".toMediaTypeOrNull()))
+            .addFormDataPart("upload_preset", uploadPreset)
+            .addFormDataPart("public_id", "users/$publicId")
+            .build()
+
+        val request = Request.Builder()
+            .url("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
+            .post(requestBody)
+            .build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                onError(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    onError(Exception("Cloudinary upload failed: ${response.code}"))
+                    return
+                }
+
+                val json = JSONObject(response.body?.string() ?: "")
+                val url = json.getString("secure_url")
+                onSuccess(url)
+            }
+        })
     }
 }
