@@ -1,50 +1,72 @@
 package com.dimitrije.hiddengems
 
-import com.dimitrije.hiddengems.ui.screens.LoginScreen
-import com.dimitrije.hiddengems.ui.screens.ProfileScreen
-import com.dimitrije.hiddengems.ui.theme.HiddenGemsTheme
+import com.dimitrije.hiddengems.navigation.AppRoutes
+import com.dimitrije.hiddengems.ui.screens.*
 
-import android.os.*
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.runtime.*
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             MaterialTheme {
-                var isLoggedIn by remember { mutableStateOf(false) }
-
-                if (isLoggedIn) {
-                    ProfileScreen(onLogout = { isLoggedIn = false })
-                } else {
-                    LoginScreen(onLoginSuccess = { isLoggedIn = true })
-                }
+                HiddenGemsNavHost()
             }
         }
-
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "$name!",
-        modifier = modifier
-    )
-}
+fun HiddenGemsNavHost() {
+    val navController = rememberNavController()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    HiddenGemsTheme {
-        Greeting("Hidden Gems")
+    NavHost(navController = navController, startDestination = AppRoutes.Start) {
+        composable(AppRoutes.Start) {
+            StartScreen(
+                onContinue = { navController.navigate(AppRoutes.Splash) }
+            )
+        }
+
+        composable(AppRoutes.Splash) {
+            SplashScreen(
+                onAuthenticated = { navController.navigate(AppRoutes.Profile) },
+                onUnauthenticated = { navController.navigate(AppRoutes.Login) }
+            )
+        }
+
+        composable(AppRoutes.Login) {
+            LoginScreen(
+                onLoginSuccess = { navController.navigate(AppRoutes.Profile) },
+                onNavigateToRegister = { navController.navigate(AppRoutes.Register) }
+            )
+        }
+
+        composable(AppRoutes.Register) {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    navController.popBackStack()
+                    navController.navigate(AppRoutes.Profile)
+                },
+                navController = navController
+            )
+        }
+
+        composable(AppRoutes.Profile) {
+            ProfileScreen(
+                onLogout = {
+                    navController.popBackStack()
+                    navController.navigate(AppRoutes.Login)
+                }
+            )
+        }
     }
 }

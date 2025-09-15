@@ -22,14 +22,14 @@ fun PasswordInput(
     OutlinedTextField(
         value = password,
         onValueChange = onPasswordChange,
-        label = { Text("Lozinka") },
+        label = { Text("Password") },
         modifier = modifier
             .then(Modifier.fillMaxWidth().padding(vertical = 8.dp)),
         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         trailingIcon = {
             val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-            val description = if (passwordVisible) "Sakrij lozinku" else "Prikaži lozinku"
+            val description = if (passwordVisible) "Hide" else "Show"
             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                 Icon(imageVector = icon, contentDescription = description)
             }
