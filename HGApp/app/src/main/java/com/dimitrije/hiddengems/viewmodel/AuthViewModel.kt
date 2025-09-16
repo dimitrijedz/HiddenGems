@@ -54,6 +54,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             "phone" to phone,
                             "email" to email,
                             "photoUrl" to photoUrl,
+                            "score" to 0,
                             "joinedAt" to Timestamp.now()
                         )
 

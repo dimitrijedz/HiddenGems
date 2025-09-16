@@ -8,6 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.dimitrije.hiddengems.model.Gem
+import com.dimitrije.hiddengems.repository.RatingRepository
+import com.dimitrije.hiddengems.ui.components.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
@@ -15,8 +18,16 @@ fun DetailsScreen(gemId: String) {
     var gem by remember { mutableStateOf<Gem?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
+    var userRating by remember { mutableIntStateOf(0) }
+    var hasRated by remember { mutableStateOf(false) }
+    var ratingMessage by remember { mutableStateOf("") }
+
     LaunchedEffect(gemId) {
-        FirebaseFirestore.getInstance().collection("gems").document(gemId)
+        val db = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val userId = auth.currentUser?.uid
+
+        db.collection("gems").document(gemId)
             .get()
             .addOnSuccessListener { doc ->
                 gem = doc.toObject(Gem::class.java)
@@ -26,6 +37,20 @@ fun DetailsScreen(gemId: String) {
                 Log.e("DetailsScreen", "Failed to load gem: ${it.message}")
                 isLoading = false
             }
+
+        if (userId != null) {
+            db.collection("gems")
+                .document(gemId)
+                .collection("ratings")
+                .document(userId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        hasRated = true
+                        userRating = doc.getLong("stars")?.toInt() ?: 0
+                    }
+                }
+        }
     }
 
     if (isLoading) {
@@ -60,5 +85,34 @@ fun DetailsScreen(gemId: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
         Text("Location: ${gem!!.lat}, ${gem!!.lng}")
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("Rating:", style = MaterialTheme.typography.titleMedium)
+
+        RatingDropdown(
+            selectedRating = if (hasRated) userRating else null,
+            enabled = !hasRated,
+            onRatingSelected = { stars ->
+                userRating = stars
+
+                RatingRepository.submitRating(
+                    gemId = gemId,
+                    stars = stars,
+                    onSuccess = {
+                        hasRated = true
+                        ratingMessage = "Thanks for rating!"
+                    },
+                    onFailure = {
+                        ratingMessage = it.message ?: "Rating failed"
+                        userRating = 0
+                    }
+                )
+            }
+        )
+
+        if (ratingMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(ratingMessage, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }

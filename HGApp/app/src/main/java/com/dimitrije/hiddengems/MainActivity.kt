@@ -83,5 +83,13 @@ fun HiddenGemsNavHost() {
             val gemId = backStackEntry.arguments?.getString("gemId") ?: return@composable
             DetailsScreen(gemId = gemId)
         }
+
+        composable(AppRoutes.GemTable) {
+            GemTableScreen(navController)
+        }
+
+        composable(AppRoutes.Leaderboard) {
+            LeaderboardScreen()
+        }
     }
 }

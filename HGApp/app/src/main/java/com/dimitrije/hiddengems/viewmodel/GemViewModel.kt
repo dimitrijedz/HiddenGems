@@ -1,14 +1,11 @@
 package com.dimitrije.hiddengems.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.dimitrije.hiddengems.model.Gem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-
 class GemViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
@@ -29,26 +26,10 @@ class GemViewModel : ViewModel() {
             imageUrl = imageUrl,
             createdBy = uid
         )
-        docRef.set(gem)
-    }
+        docRef.set(gem).addOnSuccessListener {
+            db.collection("users").document(uid)
+                .update("score", com.google.firebase.firestore.FieldValue.increment(2))
+        }
 
-    fun loadUserGems() {
-        val uid = auth.currentUser?.uid ?: return
-        db.collection("gems")
-            .whereEqualTo("createdBy", uid)
-            .get()
-            .addOnSuccessListener { result ->
-                val gems = result.documents.mapNotNull { it.toObject(Gem::class.java) }
-                _userGems.value = gems
-            }
-    }
-
-    fun loadAllGems() {
-        db.collection("gems")
-            .get()
-            .addOnSuccessListener { result ->
-                val gems = result.documents.mapNotNull { it.toObject(Gem::class.java) }
-                _userGems.value = gems
-            }
     }
 }

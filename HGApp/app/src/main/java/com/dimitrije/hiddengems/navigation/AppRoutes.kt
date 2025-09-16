@@ -10,5 +10,7 @@ object AppRoutes {
     const val Map = "map"
     const val AddGem = "add_gem"
     const val Details = "details/{gemId}"
+    const val GemTable = "gem_table"
+
     const val Leaderboard = "leaderboard"
 }
