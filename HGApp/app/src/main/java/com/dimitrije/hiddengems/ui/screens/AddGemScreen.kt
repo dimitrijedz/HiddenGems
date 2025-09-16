@@ -19,10 +19,13 @@ import androidx.navigation.NavHostController
 import com.dimitrije.hiddengems.viewmodel.GemViewModel
 import com.google.android.gms.location.LocationServices
 import com.dimitrije.hiddengems.navigation.AppRoutes
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
-import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+
 
 @Composable
 fun AddGemScreen(
@@ -30,10 +33,12 @@ fun AddGemScreen(
     viewModel: GemViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf<Location?>(null) }
     val imageUri = remember { mutableStateOf<Uri?>(null) }
+    var isSaving by remember { mutableStateOf(false) } // za loading state
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
@@ -64,10 +69,11 @@ fun AddGemScreen(
         }
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Text(text = "Add new Gem", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -93,36 +99,32 @@ fun AddGemScreen(
             Text("Choose a gem photo")
         }
 
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
                 location?.let { loc ->
-                    val fallbackImage = "https://res.cloudinary.com/your_cloud_name/image/upload/v1234567890/no_image.png"
+                    val fallbackImage =
+                        "https://res.cloudinary.com/your_cloud_name/image/upload/v1234567890/no_image.png"
 
-                    if (imageUri.value != null) {
-                        uploadImageToCloudinary(context, imageUri.value!!) { imageUrl ->
-                            val finalUrl = imageUrl ?: fallbackImage
-                            viewModel.saveGem(
-                                title = title,
-                                description = description,
-                                lat = loc.latitude,
-                                lng = loc.longitude,
-                                imageUrl = finalUrl
-                            )
-                            navController.navigate(AppRoutes.Map) {
-                                popUpTo(AppRoutes.AddGem) { inclusive = true }
-                                launchSingleTop = true
-                            }
+                    isSaving = true
+                    scope.launch {
+                        val finalUrl = if (imageUri.value != null) {
+                            uploadImageToCloudinary(context, imageUri.value!!) ?: fallbackImage
+                        } else {
+                            fallbackImage
                         }
-                    } else {
+
                         viewModel.saveGem(
                             title = title,
                             description = description,
                             lat = loc.latitude,
                             lng = loc.longitude,
-                            imageUrl = fallbackImage
+                            imageUrl = finalUrl
                         )
+
+                        isSaving = false
                         navController.navigate(AppRoutes.Map) {
                             popUpTo(AppRoutes.AddGem) { inclusive = true }
                             launchSingleTop = true
@@ -130,54 +132,56 @@ fun AddGemScreen(
                     }
                 }
             },
-            enabled = location != null && title.isNotBlank()
+            enabled = location != null && title.isNotBlank() && !isSaving
         ) {
-            Text("Save Gem")
-        }
-    }
-}
-
-fun uploadImageToCloudinary(context: Context, uri: Uri, onResult: (String?) -> Unit) {
-    val inputStream = try {
-        context.contentResolver.openInputStream(uri)
-    } catch (e: Exception) {
-        onResult(null)
-        return
-    }
-
-    val bytes = inputStream?.readBytes()
-    if (bytes == null) {
-        onResult(null)
-        return
-    }
-
-    val requestBody = MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
-        .addFormDataPart(
-            "file", "image.jpg",
-            RequestBody.create("image/*".toMediaTypeOrNull(), bytes)
-        )
-        .addFormDataPart("upload_preset", "hidden_gems_upload")
-        .build()
-
-    val request = Request.Builder()
-        .url("https://api.cloudinary.com/v1_1/di4fagc5c/image/upload")
-        .post(requestBody)
-        .build()
-
-    OkHttpClient().newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            onResult(null)
-        }
-
-        override fun onResponse(call: Call, response: Response) {
-            val body = response.body?.string()
-            val url = try {
-                JSONObject(body ?: "").optString("secure_url")
-            } catch (e: Exception) {
-                null
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Save Gem")
             }
-            onResult(url)
         }
-    })
+    }
 }
+
+
+suspend fun uploadImageToCloudinary(context: Context, uri: Uri): String? =
+    withContext(Dispatchers.IO) {
+        val inputStream = try {
+            context.contentResolver.openInputStream(uri)
+        } catch (e: Exception) {
+            return@withContext null
+        }
+
+        val bytes = inputStream?.readBytes()
+        inputStream?.close()
+
+        if (bytes == null) return@withContext null
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "file", "image.jpg",
+                RequestBody.create("image/*".toMediaTypeOrNull(), bytes)
+            )
+            .addFormDataPart("upload_preset", "hidden_gems_upload")
+            .build()
+
+        val request = Request.Builder()
+            .url("https://api.cloudinary.com/v1_1/di4fagc5c/image/upload")
+            .post(requestBody)
+            .build()
+
+        val client = OkHttpClient()
+        try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (!response.isSuccessful) return@withContext null
+                return@withContext JSONObject(body ?: "").optString("secure_url")
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
