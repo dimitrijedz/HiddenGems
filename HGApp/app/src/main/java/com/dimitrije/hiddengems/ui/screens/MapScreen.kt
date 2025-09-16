@@ -61,7 +61,7 @@ fun MapScreen(navController: NavHostController)
 
     LaunchedEffect(fineGranted.value) {
         if (fineGranted.value) {
-            gemViewModel.loadUserGems()
+            gemViewModel.loadAllGems()
         }
     }
 
@@ -139,7 +139,11 @@ fun MapScreen(navController: NavHostController)
                     Marker(
                         state = MarkerState(position = LatLng(gem.lat, gem.lng)),
                         title = gem.title,
-                        snippet = gem.description
+                        snippet = gem.description,
+                        onClick = {
+                            navController.navigate("details/${gem.id}")
+                            true
+                        }
                     )
                 }
             }

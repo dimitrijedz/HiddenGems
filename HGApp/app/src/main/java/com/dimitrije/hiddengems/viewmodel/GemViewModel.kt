@@ -43,15 +43,12 @@ class GemViewModel : ViewModel() {
             }
     }
 
-    fun getGemById(gemId: String, onResult: (Gem?) -> Unit) {
-        db.collection("gems").document(gemId)
+    fun loadAllGems() {
+        db.collection("gems")
             .get()
-            .addOnSuccessListener { doc ->
-                val gem = doc.toObject(Gem::class.java)
-                onResult(gem)
-            }
-            .addOnFailureListener {
-                onResult(null)
+            .addOnSuccessListener { result ->
+                val gems = result.documents.mapNotNull { it.toObject(Gem::class.java) }
+                _userGems.value = gems
             }
     }
 }

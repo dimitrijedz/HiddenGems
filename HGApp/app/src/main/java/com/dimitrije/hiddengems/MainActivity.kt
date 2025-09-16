@@ -8,9 +8,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
 
 class MainActivity : ComponentActivity() {
@@ -74,11 +76,12 @@ fun HiddenGemsNavHost() {
             AddGemScreen(navController = navController)
         }
 
-//        composable(AppRoutes.Details) { backStackEntry ->
-//            val gemId = backStackEntry.arguments?.getString("gemId")
-//            DetailsScreen(gemId = gemId)
-//        }
-
-
+        composable(
+            route = AppRoutes.Details,
+            arguments = listOf(navArgument("gemId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val gemId = backStackEntry.arguments?.getString("gemId") ?: return@composable
+            DetailsScreen(gemId = gemId)
+        }
     }
 }

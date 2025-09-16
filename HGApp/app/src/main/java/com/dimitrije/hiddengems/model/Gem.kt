@@ -1,5 +1,8 @@
 package com.dimitrije.hiddengems.model
 
+import com.google.firebase.firestore.IgnoreExtraProperties
+
+@IgnoreExtraProperties
 data class Gem(
     val id: String = "",
     val title: String = "",

@@ -39,8 +39,6 @@ fun RegisterScreen(
     val imagePicker = rememberLauncherForActivityResult(GetContent()) { uri ->
         photoUri = uri
     }
-
-    // Ensure latest context and navController are used inside callbacks
     val currentContext by rememberUpdatedState(context)
     val currentNavController by rememberUpdatedState(navController)
 
@@ -115,7 +113,6 @@ fun RegisterScreen(
                     errorMessage = "Missing data"
                     return@Button
                 }
-
                 authViewModel.registerWithFullData(
                     name = name,
                     surname = surname,

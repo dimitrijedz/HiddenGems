@@ -7,15 +7,18 @@ import android.content.pm.PackageManager
 import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import coil.compose.rememberAsyncImagePainter
 import com.dimitrije.hiddengems.viewmodel.GemViewModel
 import com.google.android.gms.location.LocationServices
 import com.dimitrije.hiddengems.navigation.AppRoutes
@@ -54,9 +57,8 @@ fun AddGemScreen(
     )
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri -> imageUri.value = uri }
-    )
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> imageUri.value = uri }
 
     LaunchedEffect(Unit) {
         val permission = Manifest.permission.ACCESS_FINE_LOCATION
@@ -98,6 +100,17 @@ fun AddGemScreen(
         Button(onClick = { imagePickerLauncher.launch("image/*") }) {
             Text("Choose a gem photo")
         }
+        imageUri.value?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Image(
+                painter = rememberAsyncImagePainter(it),
+                contentDescription = "Gem photo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
 
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -106,7 +119,7 @@ fun AddGemScreen(
             onClick = {
                 location?.let { loc ->
                     val fallbackImage =
-                        "https://res.cloudinary.com/your_cloud_name/image/upload/v1234567890/no_image.png"
+                        "https://res.cloudinary.com/your_cloud_name/image/upload/v1234567890/zoom.png"
 
                     isSaving = true
                     scope.launch {

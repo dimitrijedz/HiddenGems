@@ -29,9 +29,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     var registrationSuccess by mutableStateOf(false)
         private set
 
-    var registrationError by mutableStateOf<String?>(null)
-        private set
-
     fun registerWithFullData(
         name: String,
         surname: String,
