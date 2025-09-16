@@ -1,6 +1,6 @@
 package com.dimitrije.hiddengems
 
-import com.dimitrije.hiddengems.navigation.AppRoutes
+import com.dimitrije.hiddengems.navigation.*
 import com.dimitrije.hiddengems.ui.screens.*
 
 import android.os.Bundle
@@ -8,7 +8,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -68,7 +67,18 @@ fun HiddenGemsNavHost() {
         }
 
         composable(AppRoutes.Map) {
-            MapScreen()
+            MapScreen(navController = navController)
         }
+
+        composable(AppRoutes.AddGem) {
+            AddGemScreen(navController = navController)
+        }
+
+//        composable(AppRoutes.Details) { backStackEntry ->
+//            val gemId = backStackEntry.arguments?.getString("gemId")
+//            DetailsScreen(gemId = gemId)
+//        }
+
+
     }
 }

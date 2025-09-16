@@ -11,28 +11,42 @@ import com.google.android.gms.location.*
 class LocationService(private val context: Context) {
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    private var locationCallback: LocationCallback? = null
 
-    fun startLocationUpdates(onLocation: (Location) -> Unit) {
+    fun startLocationUpdates(
+        intervalMs: Long = 10_000L,
+        minIntervalMs: Long = 5_000L,
+        onLocation: (Location) -> Unit
+    ) {
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            10_000L // interval: 10 seconds
-        ).setMinUpdateIntervalMillis(5_000L) // min interval: 5 seconds
-            .build()
+            intervalMs
+        ).setMinUpdateIntervalMillis(minIntervalMs).build()
 
-        val locationCallback = object : LocationCallback() {
+        val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.lastLocation?.let { onLocation(it) }
             }
         }
+        locationCallback = callback
 
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
         ) {
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
-                locationCallback,
+                callback,
                 Looper.getMainLooper()
             )
+        }
+    }
+
+    fun stopLocationUpdates() {
+        locationCallback?.let {
+            fusedLocationClient.removeLocationUpdates(it)
+            locationCallback = null
         }
     }
 }
