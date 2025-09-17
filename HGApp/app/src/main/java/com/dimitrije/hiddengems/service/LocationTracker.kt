@@ -3,36 +3,32 @@ package com.dimitrije.hiddengems.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import android.os.Looper
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.*
-import com.dimitrije.hiddengems.model.Gem
 import com.dimitrije.hiddengems.R
+import com.dimitrije.hiddengems.model.Gem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 class LocationTracker(
     private val context: Context,
-    private val gems: List<Gem>
+    private val gems: List<Gem>,
+    private val locationService: LocationService
 ) {
     private val notifiedGemIds = mutableSetOf<String>()
-    private val locationClient = LocationServices.getFusedLocationProviderClient(context)
-
     private var lastLocation: Location? = null
     private var lastTriggerTime: Long = 0
     private val movementThreshold = 50f // meters
     private val debounceMillis = 10_000L // 10 seconds
 
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
-            val location = result.lastLocation ?: return
+    fun startTracking() {
+        locationService.startLocationUpdates(
+            intervalMs = 10_000L,
+            minIntervalMs = 5_000L
+        ) { location ->
             val now = System.currentTimeMillis()
-
             val movedEnough = lastLocation?.distanceTo(location) ?: Float.MAX_VALUE > movementThreshold
             val timePassed = now - lastTriggerTime > debounceMillis
 
@@ -44,21 +40,8 @@ class LocationTracker(
         }
     }
 
-    fun startTracking() {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
-            .setMinUpdateDistanceMeters(10f)
-            .build()
-
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        locationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
-    }
-
     fun stopTracking() {
-        locationClient.removeLocationUpdates(locationCallback)
+        locationService.stopLocationUpdates()
     }
 
     private fun checkProximity(location: Location) {
